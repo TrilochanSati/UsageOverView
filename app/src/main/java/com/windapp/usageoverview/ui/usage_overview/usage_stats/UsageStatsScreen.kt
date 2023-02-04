@@ -62,9 +62,7 @@ fun UsageStatsScreen(
                     if (!excludedApps.value.contains(AppNameInfo(usageStat.pkg, usageStat.name, true))) {
 
 
-                        val time = SimpleDateFormat("dd-MM-yyyy hh:mm:ss a", Locale.US).format(
-                            Date(usageStat.getTime())
-                        )
+                        val time = SimpleDateFormat("dd-MM-yyyy hh:mm:ss a", Locale.US).format(Date(usageStat.getTime()))
                         val timeSpent = AppUtil.formatMilliSeconds(usageStat.usedtime)
                         UsageStatsItem(
                             icon = usageStat.icon,

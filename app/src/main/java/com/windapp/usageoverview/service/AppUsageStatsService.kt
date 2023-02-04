@@ -28,10 +28,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppUsageStatsService: LifecycleService() {
+    var oldUrlInfo: String ="null"
+    var oldUrlTime:Long=System.currentTimeMillis()
 
     lateinit var receiver: PhoneUnlockedReceiver
 
@@ -62,22 +66,156 @@ class AppUsageStatsService: LifecycleService() {
 
 
 
-
         lifecycleScope.launch {
             mutableSharedFlowUrl
-                .debounce(500)
+                .debounce(2000)
                 .distinctUntilChanged()
                 .collectLatest {
-                    Log.d("sflow",it)
-                    val currentTimestamp = System.currentTimeMillis()
-                    val website=it.substringBefore(":")
-                    val packageName=it.substringAfter(":")
-                    val time= SimpleDateFormat("hh:mm a", Locale.US).format( Calendar.getInstance().time)
+                    url->
 
-                    repository.insertBrowsingTime(BrowsingTimeStats(currentTimestamp,packageName,website,time,"10",getCurrentDate()))
+                    val curUrlIndex=url.indexOf("packageNaam:")
+                    var curUrl=url.substring(0,curUrlIndex)
+                    val curBrowser=url.substring(curUrlIndex,url.length).replace("packageNaam:","")
+                    Log.d("s_url",curUrl+"  browser:"+curBrowser)
+
+                    var pattern = Pattern.compile(".*?/")
+
+                    var matcher=pattern.matcher(curUrl)
+                    if(matcher.find()){
+                        Log.d("cur_url: ",matcher.group(0).replace("/",""))
+                        curUrl=matcher.group(0).replace("/","")
+
+                            if(curUrl.trim().contains("bro.browser_exited.com") && !(curUrl.trim().contains(oldUrlInfo)) ){
+                                var timeSpent=System.currentTimeMillis()- oldUrlTime
+                                val timeSpentStr=getMinutesFromMilli(timeSpent)
+
+
+                                val currentTimestamp = System.currentTimeMillis()
+                                val website=oldUrlInfo
+                                val packageName=curBrowser
+                                val time= SimpleDateFormat("hh:mm a", Locale.US).format( Calendar.getInstance().time)
+
+                                repository.insertBrowsingTime(BrowsingTimeStats(currentTimestamp,packageName,website,time,timeSpentStr,getCurrentDate()))
+
+
+
+                                Log.d("u_time1","curUrl: "+curUrl+" oldUrl: "+oldUrlInfo+"+")
+                                oldUrlInfo=curUrl
+                                oldUrlTime=System.currentTimeMillis()
+
+                            }
+
+
+                            else   if(!(curUrl.trim().contains(oldUrlInfo))) {
+
+                                if(oldUrlInfo.trim().equals("bro.browser_exited.com") || oldUrlInfo.trim().equals("null") ){
+                                    Log.d("u_time3","entered browser")
+                                    oldUrlInfo=curUrl
+                                }
+
+                          else{
+                                    var timeSpent=System.currentTimeMillis()- oldUrlTime
+                                    val timeSpentStr=getMinutesFromMilli(timeSpent)
+
+                                    val currentTimestamp = System.currentTimeMillis()
+                                    val website=oldUrlInfo
+                                    val packageName=curBrowser
+                                    val time= SimpleDateFormat("hh:mm a", Locale.US).format( Calendar.getInstance().time)
+
+                                    repository.insertBrowsingTime(BrowsingTimeStats(currentTimestamp,packageName,website,time,timeSpentStr,getCurrentDate()))
+
+
+
+                                    Log.d("u_time2","curUrl: "+curUrl+" oldUrl: "+oldUrlInfo+"+")
+                                    oldUrlInfo=curUrl
+                                    oldUrlTime=System.currentTimeMillis()
+                                }
+
+                            }
+
+
+
+
+
+                    }
+                    else{
+
+                    }
+
+
+
 
 
                 }
+/*
+                .collectLatest {
+
+                        url->
+
+                    var curUrl=url
+                    var pattern = Pattern.compile(".*?/")
+
+                    var matcher=pattern.matcher(curUrl.urlName)
+                    if(matcher.find()){
+                        Log.d("cur_url: ",matcher.group(0).replace("/",""))
+                        curUrl=url.copy(urlName = matcher.group(0).replace("/",""))
+
+                        if(oldUrlInfo!=null){
+                            if(curUrl.urlName.equals("bro.browser_exited.com")){
+                                var timeSpent=curUrl.curTime- oldUrlInfo!!.curTime
+                                timeSpent=timeSpent/1000
+
+
+                                val currentTimestamp =( System.currentTimeMillis()/1000)
+                                val website=oldUrlInfo!!.urlName
+                                val packageName=oldUrlInfo!!.packageName
+                                val time= SimpleDateFormat("hh:mm a", Locale.US).format( Calendar.getInstance().time)
+
+                                repository.insertBrowsingTime(BrowsingTimeStats(currentTimestamp,packageName,website,time,timeSpent.toString(),getCurrentDate()))
+
+
+
+                                Log.d("u_time1",timeSpent.toString())
+                                oldUrlInfo=null
+
+                            }
+
+                            else   if(!curUrl.urlName.equals(oldUrlInfo!!.urlName)){
+                                var timeSpent=curUrl.curTime- oldUrlInfo!!.curTime
+                                timeSpent=timeSpent/1000
+
+                                val currentTimestamp = System.currentTimeMillis()
+                                val website=curUrl!!.urlName
+                                val packageName=curUrl!!.packageName
+                                val time= SimpleDateFormat("hh:mm a", Locale.US).format( Calendar.getInstance().time)
+
+                                repository.insertBrowsingTime(BrowsingTimeStats(currentTimestamp,packageName,website,time,timeSpent.toString(),getCurrentDate()))
+
+
+
+                                Log.d("u_time2",timeSpent.toString())
+                                oldUrlInfo=curUrl
+
+                            }
+
+                        }
+                        if(oldUrlInfo==null){
+                            oldUrlInfo=curUrl
+                        }
+
+
+                    }
+                    else{
+
+                    }
+
+
+
+
+
+
+                }
+*/
         }
 
 
@@ -104,7 +242,7 @@ class AppUsageStatsService: LifecycleService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val intentMainLanding = Intent(this, MainActivity::class.java)
             val pendingIntent =
-                PendingIntent.getActivity(this, 0, intentMainLanding, 0)
+                PendingIntent.getActivity(this, 0, intentMainLanding,  PendingIntent.FLAG_MUTABLE)
             iconNotification = BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
             if (mNotificationManager == null) {
                 mNotificationManager = this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -154,4 +292,21 @@ class AppUsageStatsService: LifecycleService() {
         unregisterReceiver(receiver)
 
     }
-}
+
+    private fun getMinutesFromMilli(milliseconds:Long):String{
+        // This method uses this formula :minutes =
+        // (milliseconds / 1000) / 60;
+        val minutes
+        = TimeUnit.MILLISECONDS.toMinutes(milliseconds);
+
+        // This method uses this formula seconds =
+        // (milliseconds / 1000);
+        val seconds
+        = (TimeUnit.MILLISECONDS.toSeconds(milliseconds)
+                % 60);
+
+        // Print the answer
+
+              return minutes.toString()+":"+seconds.toString()
+    }
+    }

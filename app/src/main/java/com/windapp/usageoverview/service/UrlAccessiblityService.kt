@@ -58,6 +58,7 @@ class UrlAccessiblityService : AccessibilityService() {
     fun a(str: String?): String? {
 
         return try {
+
             val poll: AccessibilityNodeInfo = linkedBlockingQueue.poll() ?: return null
             val packageName=poll.packageName.toString()
             val b2 = b(poll, 0, browserHashMap[poll.packageName.toString()])
@@ -87,11 +88,11 @@ class UrlAccessiblityService : AccessibilityService() {
 
                     }*/
 
-                    if(!url.startsWith("search or type web")){
-                        GlobalScope.launch {
-                            mutableSharedFlowUrl.emit(url+":"+packageName)
 
-                        }
+                    GlobalScope.launch {
+
+                             mutableSharedFlowUrl.emit(url+"packageNaam:"+packageName)
+
                     }
 
 
@@ -107,6 +108,11 @@ class UrlAccessiblityService : AccessibilityService() {
                 return  url
 
             } else if (b2 == null) {
+                GlobalScope.launch {
+
+                    mutableSharedFlowUrl.emit("bro.browser_exited.com/packageNaam:bro.browser_exited")
+
+                }
                 null
             } else {
                 b2.recycle()

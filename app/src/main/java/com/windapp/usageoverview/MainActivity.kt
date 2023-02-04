@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
 
         }
 
-        if (!isAccessGranted()) {
+        if (!isAccessGrantedForUsageStats()) {
             val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
             startActivity(intent)
         }
@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
 
     }
 
-    private fun isAccessGranted(): Boolean {
+    private fun isAccessGrantedForUsageStats(): Boolean {
         return try {
             val packageManager = packageManager
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
